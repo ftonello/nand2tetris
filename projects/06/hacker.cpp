@@ -69,12 +69,12 @@ namespace hacker {
 
 	class parser {
 	public:
-		typedef enum command_type {
-			NO_COMMAND,
-			A_COMMAND,
-			C_COMMAND,
-			L_COMMAND,
-		} command_type_t;
+		enum class command_type {
+			none,
+			a,
+			c,
+			l,
+		};
 
 		parser(const std::string &file)
 			: m_file(file, std::ifstream::in),
@@ -91,7 +91,7 @@ namespace hacker {
 
 		void reset()
 		{
-			m_command_type = NO_COMMAND;
+			m_command_type = command_type::none;
 			m_line_num = 0;
 			m_file.clear();
 			m_file.seekg(0);
@@ -105,7 +105,7 @@ namespace hacker {
 		void advance()
 		{
 			std::string line;
-			m_command_type = NO_COMMAND;
+			m_command_type = command_type::none;
 			do {
 				std::getline(m_file >> std::ws, line);
 
@@ -129,17 +129,17 @@ namespace hacker {
 						line.erase(comment_pos);
 
 					if (line.find("@") == 0)
-						m_command_type = A_COMMAND;
+						m_command_type = command_type::a;
 					else if (line.find("(") == 0 &&
 					         line.rfind(")") == line.size() - 1)
-						m_command_type = L_COMMAND;
+						m_command_type = command_type::l;
 					else
-						m_command_type = C_COMMAND;
+						m_command_type = command_type::c;
 				}
-			} while (m_file.good() && m_command_type == NO_COMMAND);
+			} while (m_file.good() && m_command_type == command_type::none);
 
-			if (m_command_type != NO_COMMAND) {
-				if (m_command_type != L_COMMAND)
+			if (m_command_type != command_type::none) {
+				if (m_command_type != command_type::l)
 					m_line_num++;
 				m_command = line;
 			} else
@@ -151,7 +151,7 @@ namespace hacker {
 			return m_line_num;
 		}
 
-		command_type command_type() const
+		command_type command() const
 		{
 			return m_command_type;
 		}
@@ -159,10 +159,10 @@ namespace hacker {
 		std::string symbol() const
 		{
 			switch (m_command_type) {
-			case A_COMMAND:
+			case command_type::a:
 				return m_command.substr(1);
 				break;
-			case L_COMMAND:
+			case command_type::l:
 				return m_command.substr(1, m_command.size() - 2);
 				break;
 			default:
@@ -172,7 +172,7 @@ namespace hacker {
 
 		std::string dest() const
 		{
-			if (m_command_type != C_COMMAND)
+			if (m_command_type != command_type::c)
 				return std::string("");
 
 			std::string::size_type find_len = m_command.find("=");
@@ -184,7 +184,7 @@ namespace hacker {
 
 		std::string comp() const
 		{
-			if (m_command_type != C_COMMAND)
+			if (m_command_type != command_type::c)
 				return std::string("");
 
 			std::string::size_type find_len = m_command.find("=");
@@ -193,7 +193,7 @@ namespace hacker {
 
 		std::string jump() const
 		{
-			if (m_command_type != C_COMMAND)
+			if (m_command_type != command_type::c)
 				return std::string("");
 
 			std::string::size_type find_len = m_command.find(";");
@@ -314,7 +314,7 @@ int main(int argc, char *argv[])
 
 	while (p.has_more_commands()) {
 		p.advance();
-		if (p.command_type() == hacker::parser::L_COMMAND)
+		if (p.command() == hacker::parser::command_type::l)
 			symbol_table.add_label(p.symbol(), p.line());
 	}
 
@@ -322,9 +322,9 @@ int main(int argc, char *argv[])
 
 	while (p.has_more_commands()) {
 		p.advance();
-		if (p.command_type() == hacker::parser::A_COMMAND)
+		if (p.command() == hacker::parser::command_type::a)
 			c.a_instruction(p.symbol());
-		else if (p.command_type() == hacker::parser::C_COMMAND)
+		else if (p.command() == hacker::parser::command_type::c)
 			c.c_instruction(p.dest(), p.comp(), p.jump());
 	}
 
