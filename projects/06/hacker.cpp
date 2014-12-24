@@ -77,9 +77,7 @@ namespace hacker {
 		};
 
 		parser(const std::string &file)
-			: m_file(file, std::ifstream::in),
-			  m_command_type(NO_COMMAND),
-			  m_line_num(0)
+			: m_file(file, std::ifstream::in)
 		{
 		}
 
@@ -203,10 +201,10 @@ namespace hacker {
 		}
 
 	private:
+		command_type m_command_type = command_type::none;
+		uint16_t m_line_num = 0;
 		std::ifstream m_file;
-		command_type_t m_command_type;
 		std::string m_command;
-		uint16_t m_line_num;
 	};
 
 	class code {
