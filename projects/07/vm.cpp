@@ -20,10 +20,16 @@ int main(int argc, char *argv[])
 
 	while (p.has_more_commands()) {
 		p.advance();
-		if (p.command() == vm::command_type::c_push)
+		switch (p.command()) {
+		case vm::command_type::c_push:
 			c.write_push_pop(p.command(), p.arg1(), p.arg2());
-		else if (p.command() == vm::command_type::c_arithmetic)
+			break;
+		case vm::command_type::c_arithmetic:
 			c.write_arithmetic(p.arg1());
+			break;
+		defaul:
+			std::cerr << "Error: Command not implemented yet." << std::endl;
+		}
 	}
 
 	std::cout << "Writen Hack assembly to: " << asm_file_name << std::endl;
