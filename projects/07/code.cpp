@@ -24,7 +24,8 @@ code::~code()
 void code::write_arithmetic(const std::string &cmd)
 {
 	auto func = m_arithmetic_function[cmd];
-	(this->*func)();
+	if (func)
+		(this->*func)();
 }
 
 void code::write_push_pop(command_type cmd, const std::string &segment, uint16_t index)
@@ -32,7 +33,9 @@ void code::write_push_pop(command_type cmd, const std::string &segment, uint16_t
 	switch(cmd) {
 	case command_type::c_push: {
 		auto func = m_command_function[segment];
-		(this->*func)(cmd, index);
+		if (func)
+			(this->*func)(cmd, index);
+
 		// increase stack pointer
 		m_file << "@SP" << std::endl;
 		m_file << "M=M+1" << std::endl;
@@ -40,7 +43,9 @@ void code::write_push_pop(command_type cmd, const std::string &segment, uint16_t
 	}
 	case command_type::c_pop: {
 		auto func = m_command_function[segment];
-		(this->*func)(cmd, index);
+		if (func)
+			(this->*func)(cmd, index);
+
 		// decrease stack pointer
 		m_file << "@SP" << std::endl;
 		m_file << "M=M-1" << std::endl;
