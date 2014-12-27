@@ -12,6 +12,7 @@ code::code(const std::string &file)
 
 	m_arithmetic_function = {
 		{ "add", &code::arithmetic_add },
+		{ "sub", &code::arithmetic_sub },
 	};
 }
 
@@ -77,4 +78,13 @@ void code::arithmetic_add()
 	m_file << "D=M" << std::endl;
 	m_file << "A=A-1" << std::endl;
 	m_file << "M=D+M" << std::endl;
+}
+
+void code::arithmetic_sub()
+{
+	m_file << "@SP" << std::endl;
+	m_file << "AM=M-1" << std::endl;
+	m_file << "D=M" << std::endl;
+	m_file << "A=A-1" << std::endl;
+	m_file << "M=M-D" << std::endl;
 }

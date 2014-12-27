@@ -30,5 +30,6 @@ namespace vm {
 		void push_pop_constant(vm::command_type cmd, uint16_t index);
 
 		void arithmetic_add();
+		void arithmetic_sub();
 	};
 } // namespace vm
