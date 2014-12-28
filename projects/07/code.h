@@ -31,5 +31,6 @@ namespace vm {
 
 		void arithmetic_add();
 		void arithmetic_sub();
+		void arithmetic_neg();
 	};
 } // namespace vm

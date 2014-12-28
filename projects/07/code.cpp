@@ -13,6 +13,7 @@ code::code(const std::string &file)
 	m_arithmetic_function = {
 		{ "add", &code::arithmetic_add },
 		{ "sub", &code::arithmetic_sub },
+		{ "neg", &code::arithmetic_neg },
 	};
 }
 
@@ -71,6 +72,20 @@ void code::push_pop_constant(command_type cmd, uint16_t index)
 
 /************** Arithmetics **************/
 
+/**
+ * Stack arithmetic operations:
+ * -------
+ * | ... |
+ * -------
+ * |  x  |
+ * -------
+ * |  Y  |
+ * -------
+ * |     | <- SP
+ * -------
+ */
+
+// X + Y
 void code::arithmetic_add()
 {
 	m_file << "@SP" << std::endl;
@@ -80,6 +95,7 @@ void code::arithmetic_add()
 	m_file << "M=D+M" << std::endl;
 }
 
+// X - Y
 void code::arithmetic_sub()
 {
 	m_file << "@SP" << std::endl;
@@ -87,4 +103,12 @@ void code::arithmetic_sub()
 	m_file << "D=M" << std::endl;
 	m_file << "A=A-1" << std::endl;
 	m_file << "M=M-D" << std::endl;
+}
+
+// -Y
+void code::arithmetic_neg()
+{
+	m_file << "@SP" << std::endl;
+	m_file << "A=M-1" << std::endl;
+	m_file << "M=-M" << std::endl;
 }
