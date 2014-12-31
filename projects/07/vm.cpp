@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 		case vm::command_type::c_arithmetic:
 			c.write_arithmetic(p.arg1());
 			break;
-		defaul:
+		default:
 			std::cerr << "Error: Command not implemented yet." << std::endl;
 		}
 	}
