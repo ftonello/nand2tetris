@@ -30,6 +30,7 @@ static void translate_file(const std::string &file_name)
 		p.advance();
 		switch (p.command()) {
 		case vm::command_type::c_push:
+		case vm::command_type::c_pop:
 			c.write_push_pop(p.command(), p.arg1(), p.arg2());
 			break;
 		case vm::command_type::c_arithmetic:
