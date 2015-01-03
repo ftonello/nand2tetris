@@ -4,8 +4,13 @@
 #include <fstream>
 #include <sstream>
 #include <map>
+#include <cctype>
+#include <algorithm>
 
 #include <boost/assert.hpp>
+#include <boost/filesystem.hpp>
+
+namespace fs = boost::filesystem;
 
 using namespace vm;
 
@@ -28,6 +33,7 @@ private:
 	std::map<std::string, command_function> m_push_pop_function;
 	std::map<std::string, arithmetic_function> m_arithmetic_function;
 	std::size_t m_label_count;
+	std::string m_label_static_name;
 
 	// write assembly
 	void w(const std::string &command);
@@ -50,6 +56,7 @@ private:
 	void push_pop_that(vm::command_type cmd, uint16_t index);
 	void push_pop_temp(vm::command_type cmd, uint16_t index);
 	void push_pop_pointer(vm::command_type cmd, uint16_t index);
+	void push_pop_static(vm::command_type cmd, uint16_t index);
 
 	void arithmetic_add();
 	void arithmetic_sub();
@@ -105,6 +112,11 @@ code_p::code_p(const std::string &file)
 	: m_file(file, std::ofstream::out),
 	  m_label_count(0)
 {
+	fs::path p(file);
+	m_label_static_name = p.stem().string();
+	m_label_static_name.erase(std::remove_if(m_label_static_name.begin(), m_label_static_name.end(), ::isspace),
+	                          m_label_static_name.end());
+
 	m_push_pop_function = {
 		{ "constant", &code_p::push_pop_constant },
 		{ "local", &code_p::push_pop_local },
@@ -113,6 +125,7 @@ code_p::code_p(const std::string &file)
 		{ "that", &code_p::push_pop_that },
 		{ "temp", &code_p::push_pop_temp },
 		{ "pointer", &code_p::push_pop_pointer },
+		{ "static", &code_p::push_pop_static },
 	};
 
 	m_arithmetic_function = {
@@ -288,7 +301,17 @@ void code_p::push_pop_temp(command_type cmd, uint16_t index)
 
 void code_p::push_pop_pointer(command_type cmd, uint16_t index)
 {
-	push_pop_reg("R" + std::to_string(5 + index), cmd, index);
+	push_pop_reg("R" + std::to_string(3 + index), cmd, index);
+}
+
+void code_p::push_pop_static(command_type cmd, uint16_t index)
+{
+	std::string static_label = m_label_static_name + std::to_string(index);
+
+	if (cmd == command_type::c_push)
+		label_at(static_label);
+
+	push_pop_reg(static_label, cmd, index);
 }
 
 /************** Arithmetics **************/

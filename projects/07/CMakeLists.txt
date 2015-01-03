@@ -4,12 +4,7 @@ project (vm)
 
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Werror")
 
-find_package(Boost COMPONENTS system filesystem)
-
-if(NOT Boost_FOUND)
-  message(SEND_ERROR "Boost not found")
-  return()
-endif()
+find_package(Boost REQUIRED COMPONENTS system filesystem)
 
 add_executable(vm
   vm.cpp
