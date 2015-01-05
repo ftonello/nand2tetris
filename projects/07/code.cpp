@@ -113,7 +113,7 @@ code_p::code_p(const std::string &file)
 	  m_label_count(0)
 {
 	fs::path p(file);
-	m_label_static_name = p.stem().string();
+	m_label_static_name = "STATIC" + p.stem().string();
 	m_label_static_name.erase(std::remove_if(m_label_static_name.begin(), m_label_static_name.end(), ::isspace),
 	                          m_label_static_name.end());
 
