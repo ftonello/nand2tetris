@@ -22,8 +22,26 @@ public:
 	void eval_push_pop(vm::command_type cmd, const std::string &segment, uint16_t index);
 	void eval_arithmetic(const std::string &cmd);
 
+	// write assembly
+	void w(const std::string &command);
+
+	// helper functions
 	void sp_inc();
 	void sp_dec();
+	void comp_to_stack(const std::string &comp);
+	void stack_to_dest(const std::string &dest);
+	void seg_to_desc(const std::string &dest, const std::string &label, uint16_t index);
+	void load_seg(const std::string &label, uint16_t index);
+	void load_constant(uint16_t constant);
+	void comp_to_reg(const std::string &comp, const std::string &reg);
+	void reg_to_dest(const std::string &dest, const std::string &reg);
+
+	std::string label_create();
+	template<typename T>
+	void label_add(const T &label);
+	template<typename T>
+	void label_at(const T &label);
+	void label_jump_with_comp(const std::string &comp, const std::string &jmp, const std::string &label);
 
 private:
 	using command_function = void(code_p::*)(vm::command_type, uint16_t);
@@ -34,18 +52,6 @@ private:
 	std::map<std::string, arithmetic_function> m_arithmetic_function;
 	std::size_t m_label_count;
 	std::string m_label_static_name;
-
-	// write assembly
-	void w(const std::string &command);
-
-	// helper functions
-	void comp_to_stack(const std::string &comp);
-	void stack_to_dest(const std::string &dest);
-	void seg_to_desc(const std::string &dest, const std::string &label, uint16_t index);
-	void load_seg(const std::string &label, uint16_t index);
-	void load_constant(uint16_t constant);
-	void comp_to_reg(const std::string &comp, const std::string &reg);
-	void reg_to_dest(const std::string &dest, const std::string &reg);
 
 	void push_pop_seg(const std::string &seg, vm::command_type cmd, uint16_t index);
 	void push_pop_reg(const std::string &reg, command_type cmd, uint16_t index);
@@ -67,12 +73,6 @@ private:
 	void arithmetic_and();
 	void arithmetic_or();
 	void arithmetic_not();
-
-	std::string label_create();
-	template<typename T>
-	void label_add(const T &label);
-	template<typename T>
-	void label_at(const T &label);
 };
 
 code::code(const std::string &file)
@@ -90,18 +90,38 @@ void code::write_arithmetic(const std::string &cmd)
 void code::write_push_pop(command_type cmd, const std::string &segment, uint16_t index)
 {
 	switch(cmd) {
-	case command_type::c_push: {
+	case command_type::c_push:
 		m_p->eval_push_pop(cmd, segment, index);
 		m_p->sp_inc();
 		break;
-	}
-	case command_type::c_pop: {
+	case command_type::c_pop:
 		m_p->sp_dec();
 		m_p->eval_push_pop(cmd, segment, index);
 		break;
-	}
 	default:
 		BOOST_ASSERT_MSG(false, "Wrong command_type for push_pop functions.");
+		return;
+	}
+}
+
+void code::write_label(vm::command_type cmd, const std::string &label)
+{
+	std::string local_label = "LOCALLABEL" + label;
+
+	switch(cmd) {
+	case command_type::c_label:
+		m_p->label_add(local_label);
+		break;
+	case command_type::c_goto:
+		m_p->label_jump_with_comp("0", "JMP", local_label);
+		break;
+	case command_type::c_if:
+		m_p->sp_dec();
+		m_p->stack_to_dest("D");
+		m_p->label_jump_with_comp("D", "JGT", local_label);
+		break;
+	default:
+		BOOST_ASSERT_MSG(false, "Wrong command_type for label functions.");
 		return;
 	}
 }
@@ -173,8 +193,6 @@ inline void code_p::sp_dec()
 	w("M=M-1");
 }
 
-// Private API
-
 inline void code_p::w(const std::string &command)
 {
 	m_file << command << std::endl;
@@ -228,6 +246,37 @@ inline void code_p::reg_to_dest(const std::string &dest, const std::string &reg)
 	label_at(reg);
 	w(dest + "=M");
 }
+
+/************** Label **************/
+
+inline std::string code_p::label_create()
+{
+	return "VMLABEL" + std::to_string(m_label_count++);
+}
+
+template<typename T>
+inline void code_p::label_add(const T &label)
+{
+	std::ostringstream oss;
+	oss << "(" << label << ")";
+	w(oss.str());
+}
+
+template<typename T>
+inline void code_p::label_at(const T &label)
+{
+	std::ostringstream oss;
+	oss << "@" << label;
+	w(oss.str());
+}
+
+void code_p::label_jump_with_comp(const std::string &comp, const std::string &jmp, const std::string &label)
+{
+	label_at(label);
+	w(comp + ";" + jmp);
+}
+
+// Private API
 
 /************** Push and Pop **************/
 
@@ -296,11 +345,13 @@ void code_p::push_pop_that(command_type cmd, uint16_t index)
 
 void code_p::push_pop_temp(command_type cmd, uint16_t index)
 {
+	BOOST_ASSERT_MSG(index < 8, "There are only 8 (0-7) temp indexes.");
 	push_pop_reg("R" + std::to_string(5 + index), cmd, index);
 }
 
 void code_p::push_pop_pointer(command_type cmd, uint16_t index)
 {
+	BOOST_ASSERT_MSG(index < 2, "There are only 2 (0-1) pointer indexes.");
 	push_pop_reg("R" + std::to_string(3 + index), cmd, index);
 }
 
@@ -487,27 +538,4 @@ inline void code_p::arithmetic_not()
 	label_at("SP");
 	w("A=M-1");
 	w("M=!M");
-}
-
-/************** Label **************/
-
-inline std::string code_p::label_create()
-{
-	return "VMLABEL" + std::to_string(m_label_count++);
-}
-
-template<typename T>
-inline void code_p::label_add(const T &label)
-{
-	std::ostringstream oss;
-	oss << "(" << label << ")";
-	w(oss.str());
-}
-
-template<typename T>
-inline void code_p::label_at(const T &label)
-{
-	std::ostringstream oss;
-	oss << "@" << label;
-	w(oss.str());
 }

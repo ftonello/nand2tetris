@@ -36,6 +36,11 @@ static void translate_file(const std::string &file_name)
 		case vm::command_type::c_arithmetic:
 			c.write_arithmetic(p.arg1());
 			break;
+		case vm::command_type::c_label:
+		case vm::command_type::c_goto:
+		case vm::command_type::c_if:
+			c.write_label(p.command(), p.arg1());
+			break;
 		case vm::command_type::none:
 			break;
 		default:
