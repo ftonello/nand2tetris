@@ -1,7 +1,6 @@
 #include "code.h"
 #include "command_type.h"
 
-#include <fstream>
 #include <sstream>
 #include <map>
 #include <cctype>
@@ -16,9 +15,9 @@ using namespace vm;
 
 class code_p {
 public:
-	code_p(const std::string &file);
-	~code_p();
+	code_p(std::ostream &ostream);
 
+	void set_static_label(const std::string &label);
 	void eval_push_pop(vm::command_type cmd, const std::string &segment, uint16_t index);
 	void eval_arithmetic(const std::string &cmd);
 
@@ -47,7 +46,7 @@ private:
 	using command_function = void(code_p::*)(vm::command_type, uint16_t);
 	using arithmetic_function = void(code_p::*)();
 
-	std::ofstream m_file;
+	std::ostream &m_ostream;
 	std::map<std::string, command_function> m_push_pop_function;
 	std::map<std::string, arithmetic_function> m_arithmetic_function;
 	std::size_t m_label_count;
@@ -75,9 +74,11 @@ private:
 	void arithmetic_not();
 };
 
-code::code(const std::string &file)
-	: m_p(new ::code_p(file))
+code::code(const std::string &file, std::ostream &os)
+	: m_p(new ::code_p(os))
 {
+	fs::path p(file);
+	m_p->set_static_label(p.stem().string());
 }
 
 code::~code() = default;
@@ -104,9 +105,9 @@ void code::write_push_pop(command_type cmd, const std::string &segment, uint16_t
 	}
 }
 
-void code::write_label(vm::command_type cmd, const std::string &label)
+void code::write_label_command(vm::command_type cmd, const std::string &label)
 {
-	std::string local_label = "LOCALLABEL" + label;
+	std::string local_label = "LOCALLABEL$" + label;
 
 	switch(cmd) {
 	case command_type::c_label:
@@ -128,15 +129,11 @@ void code::write_label(vm::command_type cmd, const std::string &label)
 
 /************** Private Class **************/
 
-code_p::code_p(const std::string &file)
-	: m_file(file, std::ofstream::out),
-	  m_label_count(0)
+code_p::code_p(std::ostream &ostream)
+	: m_ostream(ostream),
+	  m_label_count(0),
+	  m_label_static_name("STATIC")
 {
-	fs::path p(file);
-	m_label_static_name = "STATIC" + p.stem().string();
-	m_label_static_name.erase(std::remove_if(m_label_static_name.begin(), m_label_static_name.end(), ::isspace),
-	                          m_label_static_name.end());
-
 	m_push_pop_function = {
 		{ "constant", &code_p::push_pop_constant },
 		{ "local", &code_p::push_pop_local },
@@ -161,10 +158,11 @@ code_p::code_p(const std::string &file)
 	};
 }
 
-code_p::~code_p()
+void code_p::set_static_label(const std::string &label)
 {
-	if (m_file.is_open())
-		m_file.close();
+	m_label_static_name = "STATIC" + label;;
+	m_label_static_name.erase(std::remove_if(m_label_static_name.begin(), m_label_static_name.end(), ::isspace),
+	                          m_label_static_name.end());
 }
 
 void code_p::eval_push_pop(vm::command_type cmd, const std::string &segment, uint16_t index)
@@ -195,7 +193,7 @@ inline void code_p::sp_dec()
 
 inline void code_p::w(const std::string &command)
 {
-	m_file << command << std::endl;
+	m_ostream << command << std::endl;
 }
 
 /************** Commands **************/
